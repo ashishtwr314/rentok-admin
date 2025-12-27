@@ -23,7 +23,7 @@
     "imagekit": "^6.0.0",
     "imagekitio-react": "^4.3.0",
     "jsonwebtoken": "^9.0.2",
-    "next": "15.5.4",
+    "next": "15.5.9",
     "nodemailer": "^7.0.10",
     "ra-supabase-core": "^3.5.1",
     "ra-supabase-ui-materialui": "^3.5.1",
