@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import ImageKit from 'imagekit'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY
     const privateKey = process.env.IMAGEKIT_PRIVATE_KEY
@@ -21,11 +21,11 @@ export async function GET(request: NextRequest) {
     })
 
     const authParams = imagekit.getAuthenticationParameters()
-    
+
     return NextResponse.json(authParams)
   } catch (error) {
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to generate authentication parameters',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

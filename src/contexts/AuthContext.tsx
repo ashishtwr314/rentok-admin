@@ -40,16 +40,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout function
   const logout = async () => {
+    console.log('AuthContext: logout called')
     setState(prev => ({ ...prev, loading: true }))
     
     try {
       const { logoutUser } = await import('@/lib/auth')
       await logoutUser()
+      console.log('AuthContext: logout successful')
       setState({ user: null, loading: false, error: null })
+      
+      // Force redirect to login after logout
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
     } catch (error) {
+      console.error('AuthContext: logout error', error)
       const errorMessage = error instanceof Error ? error.message : 'Logout failed'
-      setState(prev => ({ ...prev, loading: false, error: errorMessage }))
-      throw error
+      setState({ user: null, loading: false, error: null }) // Still clear user even on error
+      
+      // Force redirect even on error
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
     }
   }
 

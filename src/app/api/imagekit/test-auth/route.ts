@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUploadAuthParams } from '@imagekit/next'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('Testing ImageKit authentication...')
     console.log('Public Key:', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY?.substring(0, 10) + '...')
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY!,
       privateKey: process.env.IMAGEKIT_PRIVATE_KEY!,
     })
-    
+
     console.log('Upload authentication successful!')
     console.log('Upload auth params:', uploadAuthParams)
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('ImageKit auth test error:', error)
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Failed to authenticate with ImageKit',
         details: error instanceof Error ? error.message : 'Unknown error',

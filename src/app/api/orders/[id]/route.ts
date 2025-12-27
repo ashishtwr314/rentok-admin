@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { sendOrderStatusUpdateEmail } from '@/lib/email'
+import { sendOrderStatusUpdateEmail, sendDeliveryPartnerAssignmentEmail } from '@/lib/email'
 
 interface RouteParams {
   params: {
@@ -82,8 +82,8 @@ export async function PATCH(
     const { id } = params
     const body = await request.json()
 
-    // Extract notes and updated_by as they're not part of the orders table
-    const { notes, updated_by, ...orderUpdates } = body
+    // Extract notes, updated_by, and assign_delivery_partner flag as they're not part of the orders table
+    const { notes, updated_by, assign_delivery_partner, ...orderUpdates } = body
 
     // Auto-cancel payment if order is being cancelled
     if (orderUpdates.status && orderUpdates.status.toLowerCase() === 'cancelled') {
@@ -93,7 +93,7 @@ export async function PATCH(
 
     // Fetch the current order data before updating (for email notification)
     let orderBeforeUpdate = null
-    if (orderUpdates.status) {
+    if (orderUpdates.status || assign_delivery_partner) {
       const { data: orderData } = await supabase
         .from('orders')
         .select(`
@@ -108,6 +108,7 @@ export async function PATCH(
           order_items!inner(
             order_item_id,
             product_id,
+            selected_size,
             quantity,
             products!inner(
               title,
@@ -208,6 +209,75 @@ export async function PATCH(
       }
     }
 
+    // Send email to delivery partner only when:
+    // 1. Delivery partner is being assigned (not already assigned)
+    // 2. Payment info changes (status or method)
+    // 3. Delivery address changes
+    // 4. Delivery partner is unassigned
+    const shouldSendDeliveryEmail = (
+      // New assignment
+      (assign_delivery_partner && orderUpdates.delivery_partner_id && orderBeforeUpdate?.delivery_partner_id !== orderUpdates.delivery_partner_id) ||
+      // Payment changes and partner is assigned
+      ((orderUpdates.payment_status || orderUpdates.payment_method) && (orderBeforeUpdate?.delivery_partner_id || orderUpdates.delivery_partner_id)) ||
+      // Delivery address changes and partner is assigned
+      (orderUpdates.delivery_address && (orderBeforeUpdate?.delivery_partner_id || orderUpdates.delivery_partner_id)) ||
+      // Partner is being unassigned
+      (orderBeforeUpdate?.delivery_partner_id && !orderUpdates.delivery_partner_id)
+    )
+
+    if (shouldSendDeliveryEmail && orderBeforeUpdate) {
+      // Get the delivery partner ID (either the new one or the existing one)
+      const deliveryPartnerId = orderUpdates.delivery_partner_id || orderBeforeUpdate.delivery_partner_id
+
+      if (deliveryPartnerId) {
+        console.log('🚚 Attempting to send delivery partner notification email...')
+        console.log(`   Order: ${orderBeforeUpdate.order_number}`)
+        console.log(`   Delivery Partner ID: ${deliveryPartnerId}`)
+
+        try {
+          // Fetch delivery partner details
+          const { data: deliveryPartner, error: dpError } = await supabase
+            .from('delivery_partners')
+            .select('*')
+            .eq('delivery_partner_id', deliveryPartnerId)
+            .single()
+
+          if (dpError || !deliveryPartner) {
+            console.error('❌ Failed to fetch delivery partner details:', dpError)
+          } else {
+            // Use updated values if they exist, otherwise use old values
+            const finalDeliveryAddress = orderUpdates.delivery_address || orderBeforeUpdate.delivery_address
+            const finalPaymentStatus = orderUpdates.payment_status || orderBeforeUpdate.payment_status
+            const finalPaymentMethod = orderUpdates.payment_method || orderBeforeUpdate.payment_method
+
+            const emailResult = await sendDeliveryPartnerAssignmentEmail({
+              partnerName: deliveryPartner.name,
+              partnerEmail: deliveryPartner.email,
+              orderNumber: orderBeforeUpdate.order_number,
+              deliveryAddress: finalDeliveryAddress,
+              contactNumber: orderBeforeUpdate.contact_number,
+              totalAmount: orderBeforeUpdate.total_amount,
+              paymentStatus: finalPaymentStatus,
+              paymentMethod: finalPaymentMethod
+            })
+
+            if (emailResult.success) {
+              console.log('✅ DELIVERY PARTNER EMAIL SENT SUCCESSFULLY!')
+              console.log(`   Message ID: ${emailResult.data?.messageId}`)
+              console.log(`   Recipient: ${deliveryPartner.email}`)
+            } else {
+              console.error('❌ DELIVERY PARTNER EMAIL FAILED TO SEND')
+              console.error('   Error:', emailResult.error)
+            }
+          }
+        } catch (emailError) {
+          // Log error but don't fail the request
+          console.error('❌ DELIVERY PARTNER EMAIL ERROR (Exception caught)')
+          console.error('   Error details:', emailError)
+        }
+      }
+    }
+
     return NextResponse.json(
       { message: 'Order updated successfully' },
       { status: 200 }
@@ -229,19 +299,7 @@ export async function DELETE(
   try {
     const { id } = params
 
-    // Delete order items first (if not handled by cascade)
-    await supabase
-      .from('order_items')
-      .delete()
-      .eq('order_id', id)
-
-    // Delete order status history
-    await supabase
-      .from('order_status_history')
-      .delete()
-      .eq('order_id', id)
-
-    // Delete the order
+    // Delete the order (CASCADE will automatically delete related order_items and order_status_history)
     const { error } = await supabase
       .from('orders')
       .delete()

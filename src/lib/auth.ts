@@ -8,7 +8,7 @@ export interface AdminUser {
   phone_verified: boolean
   email_verified: boolean
   is_verified: boolean
-  type: 'admin' | 'vendor'
+  type: 'admin' | 'vendor' | 'delivery_partner'
   created_at: string
   updated_at: string
 }
@@ -103,17 +103,44 @@ export async function loginUser(email: string, password: string): Promise<AdminU
 
 // Logout function
 export async function logoutUser(): Promise<void> {
-  // Clear session from localStorage and cookie
-  localStorage.removeItem(SESSION_KEY)
-  removeCookie(SESSION_KEY)
+  try {
+    // Clear session from localStorage
+    localStorage.removeItem(SESSION_KEY)
+    
+    // Clear cookie with multiple domain/path combinations to ensure it's removed
+    removeCookie(SESSION_KEY)
+    
+    // Also try removing with different paths (belt and suspenders approach)
+    if (typeof window !== 'undefined') {
+      // Remove for root path
+      document.cookie = `${SESSION_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+      // Remove for current path
+      document.cookie = `${SESSION_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${window.location.pathname};`
+      // Remove without path (some browsers need this)
+      document.cookie = `${SESSION_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC;`
+    }
+    
+    console.log('Logout: Session cleared successfully')
+  } catch (error) {
+    console.error('Logout error:', error)
+    // Even if there's an error, ensure localStorage is cleared
+    if (typeof window !== 'undefined') {
+      localStorage.clear() // Nuclear option
+    }
+  }
 }
 
 // Get current user from session
 export async function getCurrentUser(): Promise<AdminUser | null> {
   try {
+    if (typeof window === 'undefined') {
+      return null
+    }
+
     const storedSessionData = localStorage.getItem(SESSION_KEY)
     
     if (!storedSessionData) {
+      console.log('getCurrentUser: No session found')
       return null
     }
 
@@ -122,7 +149,8 @@ export async function getCurrentUser(): Promise<AdminUser | null> {
     // Check if session is expired (24 hours)
     const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
     if (Date.now() - timestamp > SESSION_DURATION) {
-      localStorage.removeItem(SESSION_KEY)
+      console.log('getCurrentUser: Session expired')
+      await logoutUser() // Use proper logout to clear everything
       return null
     }
 
@@ -135,7 +163,8 @@ export async function getCurrentUser(): Promise<AdminUser | null> {
       .single()
 
     if (error || !adminUser) {
-      localStorage.removeItem(SESSION_KEY)
+      console.log('getCurrentUser: User not found or not verified')
+      await logoutUser() // Use proper logout to clear everything
       return null
     }
 
@@ -161,8 +190,9 @@ export async function getCurrentUser(): Promise<AdminUser | null> {
     setCookie(SESSION_KEY, updatedSessionData, 1)
 
     return updatedUser
-  } catch {
-    localStorage.removeItem(SESSION_KEY)
+  } catch (error) {
+    console.error('getCurrentUser error:', error)
+    await logoutUser() // Use proper logout to clear everything
     return null
   }
 }
@@ -174,11 +204,14 @@ export function hasPermission(user: AdminUser | null, permission: string): boole
   const permissions = {
     canManageUsers: user.type === 'admin',
     canManageVendors: user.type === 'admin',
-    canManageProducts: true, // Both admin and vendor can manage products
-    canManageOrders: true,
-    canViewReports: true,
+    canManageDeliveryPartners: user.type === 'admin',
+    canManageProducts: user.type === 'admin' || user.type === 'vendor',
+    canManageOrders: user.type === 'admin' || user.type === 'vendor',
+    canViewReports: user.type === 'admin' || user.type === 'vendor',
     canManageCategories: user.type === 'admin',
-    canManageSettings: user.type === 'admin'
+    canManageSettings: user.type === 'admin',
+    canManageDeliveries: user.type === 'admin' || user.type === 'delivery_partner',
+    canViewDeliveries: user.type === 'delivery_partner'
   }
 
   return permissions[permission as keyof typeof permissions] || false
@@ -186,7 +219,10 @@ export function hasPermission(user: AdminUser | null, permission: string): boole
 
 // Get redirect path based on user type
 export function getRedirectPath(user: AdminUser): string {
-  return user.type === 'admin' ? '/admin/dashboard' : '/vendor/dashboard'
+  if (user.type === 'admin') return '/admin/dashboard'
+  if (user.type === 'vendor') return '/vendor/dashboard'
+  if (user.type === 'delivery_partner') return '/delivery/dashboard'
+  return '/login'
 }
 
 // Check if session exists (for server-side)

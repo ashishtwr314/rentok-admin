@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { 
-  Box, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Grid, 
+import { useState, useEffect } from 'react'
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
   Button,
   Avatar,
   Chip,
@@ -14,7 +14,7 @@ import {
   Alert,
   AlertTitle
 } from '@mui/material'
-import { 
+import {
   Dashboard as DashboardIcon,
   Store as StoreIcon,
   Inventory as InventoryIcon,
@@ -100,13 +100,12 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('Dashboard: Logout initiated')
       await logout()
-      router.push('/login')
+      // AuthContext will handle redirect
     } catch (error) {
-      console.error('Logout error:', error)
-      // Fallback: clear localStorage and redirect
-      localStorage.clear()
-      router.push('/login')
+      console.error('Dashboard: Logout error:', error)
+      // AuthContext will still handle redirect
     }
   }
 
@@ -219,7 +218,7 @@ const AdminDashboard = () => {
           </Box>
         ) : (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -236,7 +235,7 @@ const AdminDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -253,7 +252,7 @@ const AdminDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -270,7 +269,7 @@ const AdminDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -287,7 +286,7 @@ const AdminDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -313,7 +312,7 @@ const AdminDashboard = () => {
               Quick Actions
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -328,7 +327,7 @@ const AdminDashboard = () => {
                   Manage Vendors
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -342,7 +341,7 @@ const AdminDashboard = () => {
                   Manage Products
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -357,7 +356,7 @@ const AdminDashboard = () => {
                   Manage Categories
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -372,7 +371,7 @@ const AdminDashboard = () => {
                   Manage Coupons
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -398,7 +397,7 @@ const AdminDashboard = () => {
               Marketing & Promotions
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={4}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -424,7 +423,7 @@ const AdminDashboard = () => {
               Admin Privileges
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ p: 2, backgroundColor: THEME_COLORS.tint, borderRadius: 2 }}>
                   <Typography variant="h6" sx={{ mb: 1, color: THEME_COLORS.rentPrimary }}>
                     Full System Access
@@ -437,7 +436,7 @@ const AdminDashboard = () => {
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ p: 2, backgroundColor: THEME_COLORS.tint, borderRadius: 2 }}>
                   <Typography variant="h6" sx={{ mb: 1, color: THEME_COLORS.rentPrimary }}>
                     Administrative Tools

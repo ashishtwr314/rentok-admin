@@ -209,12 +209,12 @@ const VendorProductsPage = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('Vendor Products: Logout initiated')
       await logout()
-      router.push('/login')
+      // AuthContext will handle redirect
     } catch (error) {
-      console.error('Logout error:', error)
-      localStorage.clear()
-      router.push('/login')
+      console.error('Vendor Products: Logout error:', error)
+      // AuthContext will still handle redirect
     }
   }
 

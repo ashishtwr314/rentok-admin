@@ -45,7 +45,8 @@ import {
   Person as PersonIcon,
   Payment as PaymentIcon,
   Image as ImageIcon,
-  Receipt as ReceiptIcon
+  Receipt as ReceiptIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material'
 import { Sidebar } from '../../../components/Sidebar'
 import { supabase } from '../../../lib/supabase'
@@ -121,6 +122,7 @@ const VendorOrdersPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('')
+  const [returnFilter, setReturnFilter] = useState('')
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' })
@@ -217,12 +219,12 @@ const VendorOrdersPage = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('Vendor Orders: Logout initiated')
       await logout()
-      router.push('/login')
+      // AuthContext will handle redirect
     } catch (error) {
-      console.error('Logout error:', error)
-      localStorage.clear()
-      router.push('/login')
+      console.error('Vendor Orders: Logout error:', error)
+      // AuthContext will still handle redirect
     }
   }
 
@@ -311,8 +313,31 @@ const VendorOrdersPage = () => {
     
     const matchesStatus = !statusFilter || order.status === statusFilter
     const matchesPaymentStatus = !paymentStatusFilter || order.payment_status === paymentStatusFilter
+    
+    // Return date filter
+    let matchesReturnFilter = true
+    if (returnFilter) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const endDate = new Date(order.rental_end_date)
+      endDate.setHours(0, 0, 0, 0)
+      
+      if (returnFilter === 'today') {
+        matchesReturnFilter = endDate.getTime() === today.getTime()
+      } else if (returnFilter === 'tomorrow') {
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        matchesReturnFilter = endDate.getTime() === tomorrow.getTime()
+      } else if (returnFilter === 'this_week') {
+        const nextWeek = new Date(today)
+        nextWeek.setDate(nextWeek.getDate() + 7)
+        matchesReturnFilter = endDate >= today && endDate <= nextWeek
+      } else if (returnFilter === 'overdue') {
+        matchesReturnFilter = endDate < today && order.status !== 'cancelled' && order.status !== 'rejected'
+      }
+    }
 
-    return matchesSearch && matchesStatus && matchesPaymentStatus
+    return matchesSearch && matchesStatus && matchesPaymentStatus && matchesReturnFilter
   })
 
   const paginatedOrders = filteredOrders.slice(
@@ -334,6 +359,52 @@ const VendorOrdersPage = () => {
       month: 'short',
       day: 'numeric'
     })
+  }
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getReturnStatus = (order: Order) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startDate = new Date(order.rental_start_date)
+    const endDate = new Date(order.rental_end_date)
+    startDate.setHours(0, 0, 0, 0)
+    endDate.setHours(0, 0, 0, 0)
+    
+    // Calculate days difference
+    const daysUntilReturn = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (order.status === 'cancelled' || order.status === 'rejected') {
+      return { status: 'Cancelled', color: 'default', days: null, variant: 'outlined' as const }
+    }
+    
+    if (today < startDate) {
+      return { status: 'Not Started', color: 'info', days: null, variant: 'outlined' as const }
+    }
+    
+    if (today >= startDate && today <= endDate) {
+      if (daysUntilReturn === 0) {
+        return { status: 'Return Today', color: 'warning', days: 0, variant: 'filled' as const }
+      } else if (daysUntilReturn === 1) {
+        return { status: 'Return Tomorrow', color: 'warning', days: 1, variant: 'filled' as const }
+      }
+      return { status: 'In Use', color: 'info', days: daysUntilReturn, variant: 'filled' as const }
+    }
+    
+    if (today > endDate) {
+      const daysOverdue = Math.abs(daysUntilReturn)
+      return { status: 'Overdue', color: 'error', days: daysOverdue, variant: 'filled' as const }
+    }
+    
+    return { status: 'Unknown', color: 'default', days: null, variant: 'outlined' as const }
   }
 
   const getStatusColor = (status: string) => {
@@ -485,7 +556,7 @@ const VendorOrdersPage = () => {
             </Box>
             
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6} lg={6}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   placeholder="Search by order number, customer name, email, or phone..."
@@ -501,13 +572,19 @@ const VendorOrdersPage = () => {
                 />
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3} lg={3}>
+              <Grid item xs={12} sm={6} md={4} lg={3}>
                 <FormControl fullWidth>
                   <InputLabel>Order Status</InputLabel>
                   <Select
                     value={statusFilter}
                     label="Order Status"
                     onChange={(e) => setStatusFilter(e.target.value)}
+                    sx={{
+                      minWidth: 180,
+                      '& .MuiSelect-select': {
+                        minWidth: 180,
+                      },
+                    }}
                   >
                     <MenuItem value="">All Status</MenuItem>
                     <MenuItem value="pending">Pending</MenuItem>
@@ -521,13 +598,19 @@ const VendorOrdersPage = () => {
                 </FormControl>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3} lg={3}>
+              <Grid item xs={12} sm={6} md={4} lg={3}>
                 <FormControl fullWidth>
                   <InputLabel>Payment Status</InputLabel>
                   <Select
                     value={paymentStatusFilter}
                     label="Payment Status"
                     onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                    sx={{
+                      minWidth: 180,
+                      '& .MuiSelect-select': {
+                        minWidth: 180,
+                      },
+                    }}
                   >
                     <MenuItem value="">All Status</MenuItem>
                     <MenuItem value="pending">Pending</MenuItem>
@@ -538,10 +621,101 @@ const VendorOrdersPage = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
+              <Grid item xs={12} sm={6} md={4} lg={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Return Date</InputLabel>
+                  <Select
+                    value={returnFilter}
+                    label="Return Date"
+                    onChange={(e) => setReturnFilter(e.target.value)}
+                    sx={{
+                      minWidth: 180,
+                      backgroundColor: returnFilter ? '#fff7e6' : 'white',
+                      '& .MuiSelect-select': {
+                        minWidth: 180,
+                      },
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: returnFilter ? THEME_COLORS.primary : undefined,
+                        borderWidth: returnFilter ? 2 : 1,
+                      },
+                    }}
+                  >
+                    <MenuItem value="">All Orders</MenuItem>
+                    <MenuItem value="today">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CalendarIcon sx={{ fontSize: 18, color: THEME_COLORS.primary }} />
+                        <Typography>Returning Today</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="tomorrow">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CalendarIcon sx={{ fontSize: 18, color: '#2196f3' }} />
+                        <Typography>Returning Tomorrow</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="this_week">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CalendarIcon sx={{ fontSize: 18, color: '#4caf50' }} />
+                        <Typography>Returning This Week</Typography>
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="overdue">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CalendarIcon sx={{ fontSize: 18, color: '#f44336' }} />
+                        <Typography sx={{ fontWeight: 'bold', color: '#f44336' }}>Overdue Returns</Typography>
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={12} lg={3}>
+                <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', gap: 1 }}>
+                  <Chip
+                    label={`${filteredOrders.length} result${filteredOrders.length !== 1 ? 's' : ''}`}
+                    color="primary"
+                    sx={{ 
+                      fontWeight: 'bold',
+                      fontSize: '0.875rem',
+                      px: 1
+                    }}
+                  />
+                </Box>
+              </Grid>
             </Grid>
             
-            {(searchTerm || statusFilter || paymentStatusFilter) && (
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            {(searchTerm || statusFilter || paymentStatusFilter || returnFilter) && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {returnFilter && (
+                    <Chip
+                      label={
+                        returnFilter === 'today' ? '🎯 Returning Today' :
+                        returnFilter === 'tomorrow' ? '📅 Returning Tomorrow' :
+                        returnFilter === 'this_week' ? '📆 Returning This Week' :
+                        returnFilter === 'overdue' ? '⚠️ Overdue Returns' : ''
+                      }
+                      onDelete={() => setReturnFilter('')}
+                      color={returnFilter === 'overdue' ? 'error' : 'primary'}
+                      sx={{ fontWeight: 'bold' }}
+                    />
+                  )}
+                  {statusFilter && (
+                    <Chip
+                      label={`Status: ${statusFilter}`}
+                      onDelete={() => setStatusFilter('')}
+                      variant="outlined"
+                    />
+                  )}
+                  {paymentStatusFilter && (
+                    <Chip
+                      label={`Payment: ${paymentStatusFilter}`}
+                      onDelete={() => setPaymentStatusFilter('')}
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
                 <Button
                   variant="outlined"
                   size="small"
@@ -549,6 +723,7 @@ const VendorOrdersPage = () => {
                     setSearchTerm('')
                     setStatusFilter('')
                     setPaymentStatusFilter('')
+                    setReturnFilter('')
                   }}
                   sx={{
                     color: THEME_COLORS.rentPrimary,
@@ -571,6 +746,7 @@ const VendorOrdersPage = () => {
                     <TableCell>Customer</TableCell>
                     <TableCell>Items</TableCell>
                     <TableCell>Rental Period</TableCell>
+                    <TableCell>Return Status</TableCell>
                     <TableCell>Amount</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Payment</TableCell>
@@ -580,18 +756,20 @@ const VendorOrdersPage = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
                   ) : paginatedOrders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
                         No orders found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedOrders.map((order) => (
+                    paginatedOrders.map((order) => {
+                      const returnStatus = getReturnStatus(order)
+                      return (
                       <TableRow key={order.order_id} hover>
                         <TableCell>
                           <Box>
@@ -625,11 +803,11 @@ const VendorOrdersPage = () => {
                         </TableCell>
                         <TableCell>
                           <Box>
-                            <Typography variant="caption" display="block">
-                              {formatDate(order.rental_start_date)}
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              Start: {formatDate(order.rental_start_date)}
                             </Typography>
-                            <Typography variant="caption" display="block">
-                              to {formatDate(order.rental_end_date)}
+                            <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', color: THEME_COLORS.rentPrimary, mt: 0.5 }}>
+                              Return: {formatDate(order.rental_end_date)}
                             </Typography>
                             <Chip 
                               label={`${order.rental_days} days`} 
@@ -637,6 +815,25 @@ const VendorOrdersPage = () => {
                               sx={{ mt: 0.5 }}
                             />
                           </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={returnStatus.status}
+                            color={returnStatus.color}
+                            size="small"
+                            variant={returnStatus.variant}
+                            sx={{ 
+                              textTransform: 'capitalize',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                          {returnStatus.days !== null && (
+                            <Typography variant="caption" display="block" sx={{ mt: 0.5 }} color={returnStatus.color === 'error' ? 'error.main' : 'text.secondary'}>
+                              {returnStatus.color === 'error' 
+                                ? `${returnStatus.days} day(s) overdue` 
+                                : `${returnStatus.days} day(s) left`}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: THEME_COLORS.rentPrimary }}>
@@ -676,7 +873,8 @@ const VendorOrdersPage = () => {
                           </Box>
                         </TableCell>
                       </TableRow>
-                    ))
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -787,12 +985,53 @@ const VendorOrdersPage = () => {
                   <Typography variant="body2">
                     <strong>Contact:</strong> {selectedOrder.contact_number}
                   </Typography>
+                  <Divider sx={{ my: 1 }} />
                   <Typography variant="body2">
-                    <strong>Rental Period:</strong> {formatDate(selectedOrder.rental_start_date)} - {formatDate(selectedOrder.rental_end_date)}
+                    <strong>Rental Start:</strong> {formatDate(selectedOrder.rental_start_date)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: THEME_COLORS.rentPrimary, fontWeight: 'bold' }}>
+                    <strong>Return Date:</strong> {formatDate(selectedOrder.rental_end_date)}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Duration:</strong> {selectedOrder.rental_days} days
                   </Typography>
+                  <Divider sx={{ my: 1 }} />
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      Return Status:
+                    </Typography>
+                    {(() => {
+                      const returnStatus = getReturnStatus(selectedOrder)
+                      return (
+                        <>
+                          <Chip
+                            label={returnStatus.status}
+                            color={returnStatus.color}
+                            size="medium"
+                            variant={returnStatus.variant}
+                            sx={{ 
+                              fontWeight: 'bold',
+                              fontSize: '0.875rem'
+                            }}
+                          />
+                          {returnStatus.days !== null && (
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                mt: 1, 
+                                fontWeight: 'bold',
+                                color: returnStatus.color === 'error' ? 'error.main' : 'text.primary'
+                              }}
+                            >
+                              {returnStatus.color === 'error' 
+                                ? `⚠️ ${returnStatus.days} day(s) overdue for return!` 
+                                : `📅 ${returnStatus.days} day(s) until return`}
+                            </Typography>
+                          )}
+                        </>
+                      )
+                    })()}
+                  </Box>
                 </Box>
               </Grid>
 

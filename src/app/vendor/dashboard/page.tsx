@@ -110,13 +110,12 @@ const VendorDashboard = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('Vendor Dashboard: Logout initiated')
       await logout()
-      router.push('/login')
+      // AuthContext will handle redirect
     } catch (error) {
-      console.error('Logout error:', error)
-      // Fallback: clear localStorage and redirect
-      localStorage.clear()
-      router.push('/login')
+      console.error('Vendor Dashboard: Logout error:', error)
+      // AuthContext will still handle redirect
     }
   }
 
@@ -216,7 +215,7 @@ const VendorDashboard = () => {
           </Box>
         ) : (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -233,7 +232,7 @@ const VendorDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -250,7 +249,7 @@ const VendorDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -267,7 +266,7 @@ const VendorDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -284,7 +283,7 @@ const VendorDashboard = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={2.4}>
+            <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -310,7 +309,7 @@ const VendorDashboard = () => {
               Quick Actions
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -325,7 +324,7 @@ const VendorDashboard = () => {
                   Add Product
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -340,7 +339,7 @@ const VendorDashboard = () => {
                   My Products
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -355,7 +354,7 @@ const VendorDashboard = () => {
                   Manage Orders
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -380,7 +379,7 @@ const VendorDashboard = () => {
               Vendor Features
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ p: 2, backgroundColor: THEME_COLORS.tint, borderRadius: 2 }}>
                   <Typography variant="h6" sx={{ mb: 1, color: THEME_COLORS.rentPrimary }}>
                     Product Management
@@ -393,7 +392,7 @@ const VendorDashboard = () => {
                   </Typography>
                 </Box>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <Box sx={{ p: 2, backgroundColor: THEME_COLORS.tint, borderRadius: 2 }}>
                   <Typography variant="h6" sx={{ mb: 1, color: THEME_COLORS.rentPrimary }}>
                     Order Management

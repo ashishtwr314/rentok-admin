@@ -5,7 +5,7 @@ import { supabase } from '../../../../lib/supabase'
 export async function GET(request: NextRequest) {
   try {
     // Test if coupons table exists by trying to select from it
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('coupons')
       .select('count')
       .limit(1)

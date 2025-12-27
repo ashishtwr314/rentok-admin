@@ -416,6 +416,203 @@ function generateOrderStatusUpdateEmailHTML(data: OrderStatusUpdateEmailData): s
   `.trim();
 }
 
+interface DeliveryPartnerAssignmentEmailData {
+  partnerName: string;
+  partnerEmail: string;
+  orderNumber: string;
+  deliveryAddress: string;
+  contactNumber: string;
+  totalAmount: number;
+  paymentStatus: string;
+  paymentMethod?: string;
+}
+
+export async function sendDeliveryPartnerAssignmentEmail(data: DeliveryPartnerAssignmentEmailData) {
+  try {
+    const emailHtml = generateDeliveryPartnerAssignmentEmailHTML(data);
+    
+    const mailOptions = {
+      from: `${process.env.SMTP_FROM_NAME || 'RentOK'} <${process.env.SMTP_FROM_EMAIL}>`,
+      to: data.partnerEmail,
+      subject: `🚚 New Delivery Assignment - Order ${data.orderNumber}`,
+      html: emailHtml,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error sending delivery partner assignment email:', error);
+    return { success: false, error };
+  }
+}
+
+function generateDeliveryPartnerAssignmentEmailHTML(data: DeliveryPartnerAssignmentEmailData): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Delivery - ${data.orderNumber}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+    }
+    .header {
+      background: linear-gradient(135deg, #FBA800 0%, #9A2143 100%);
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #ffffff;
+      margin: 0;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .content {
+      padding: 30px 20px;
+    }
+    .delivery-box {
+      background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%);
+      border-left: 4px solid #4caf50;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .delivery-box h3 {
+      margin: 0 0 15px 0;
+      color: #2e7d32;
+      font-size: 18px;
+    }
+    .delivery-box p {
+      margin: 10px 0;
+      color: #1b5e20;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .payment-box {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .payment-box h3 {
+      margin: 0 0 15px 0;
+      color: #856404;
+      font-size: 18px;
+    }
+    .payment-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 16px;
+      color: #856404;
+    }
+    .payment-status {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-top: 10px;
+    }
+    .payment-status.paid {
+      background-color: #4caf50;
+      color: white;
+    }
+    .payment-status.pending {
+      background-color: #ff9800;
+      color: white;
+    }
+    .footer {
+      background-color: #333333;
+      color: #ffffff;
+      padding: 20px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #FBA800;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🚚 New Delivery</h1>
+      <p style="color: white; margin: 10px 0 0 0; font-size: 18px;">Order #${data.orderNumber}</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <p style="font-size: 16px; color: #333333; margin-bottom: 20px;">
+        Hello <strong>${data.partnerName}</strong>,
+      </p>
+      
+      <p style="font-size: 16px; color: #333333;">
+        You have a new delivery assignment.
+      </p>
+
+      <!-- Delivery Address -->
+      <div class="delivery-box">
+        <h3>📍 Delivery Address</h3>
+        <p><strong>${data.deliveryAddress}</strong></p>
+        <p>📞 Contact: <strong>${data.contactNumber}</strong></p>
+      </div>
+
+      <!-- Payment Information -->
+      <div class="payment-box">
+        <h3>💰 Payment Information</h3>
+        <div class="payment-row">
+          <span><strong>Total Amount:</strong></span>
+          <span><strong>${formatPrice(data.totalAmount)}</strong></span>
+        </div>
+        <div style="margin-top: 15px;">
+          <span style="font-weight: 600; color: #856404;">Payment Type:</span>
+          <span class="payment-status ${data.paymentStatus.toLowerCase()}">${data.paymentStatus}${data.paymentMethod ? ` - ${data.paymentMethod}` : ''}</span>
+        </div>
+        ${data.paymentStatus.toLowerCase() === 'pending' ? `
+        <p style="margin-top: 15px; font-weight: bold; color: #c62828;">
+          ⚠️ COD Order: Collect payment before delivery
+        </p>
+        ` : ''}
+      </div>
+
+      <p style="font-size: 14px; color: #666; margin-top: 30px;">
+        Please contact the customer before delivery and ensure safe handling of items.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p style="margin: 0 0 10px 0;"><strong>RentOK</strong></p>
+      <p style="margin: 5px 0;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://rentok.com'}/delivery/dashboard">Delivery Dashboard</a> | 
+        <a href="mailto:support@rentok.com">Support</a>
+      </p>
+      <p style="margin: 15px 0 0 0; font-size: 12px; color: #999999;">
+        © ${new Date().getFullYear()} RentOK. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
 function generateVendorWelcomeEmailHTML(data: VendorWelcomeEmailData): string {
   return `
 <!DOCTYPE html>

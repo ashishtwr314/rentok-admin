@@ -9,7 +9,7 @@ CREATE TABLE public.admins (
   phone_verified boolean DEFAULT false,
   email_verified boolean DEFAULT false,
   is_verified boolean DEFAULT (phone_verified AND email_verified),
-  type character varying NOT NULL CHECK (type::text = ANY (ARRAY['vendor'::character varying, 'admin'::character varying]::text[])),
+  type character varying NOT NULL CHECK (type::text = ANY (ARRAY['admin'::character varying, 'vendor'::character varying, 'delivery_partner'::character varying]::text[])),
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT admins_pkey PRIMARY KEY (id)
@@ -74,6 +74,22 @@ CREATE TABLE public.coupons (
   CONSTRAINT coupons_pkey PRIMARY KEY (coupon_id),
   CONSTRAINT coupons_vendor_id_fkey FOREIGN KEY (vendor_id) REFERENCES public.vendors(vendor_id)
 );
+CREATE TABLE public.delivery_partners (
+  delivery_partner_id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name character varying NOT NULL,
+  email character varying NOT NULL UNIQUE,
+  phone character varying NOT NULL,
+  vehicle_type character varying,
+  vehicle_number character varying,
+  address text,
+  city character varying,
+  state character varying,
+  postal_code character varying,
+  is_active boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT delivery_partners_pkey PRIMARY KEY (delivery_partner_id)
+);
 CREATE TABLE public.order_items (
   order_item_id uuid NOT NULL DEFAULT uuid_generate_v4(),
   order_id uuid NOT NULL,
@@ -84,8 +100,8 @@ CREATE TABLE public.order_items (
   total_price numeric NOT NULL,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT order_items_pkey PRIMARY KEY (order_item_id),
-  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(order_id),
-  CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(product_id)
+  CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(product_id),
+  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(order_id)
 );
 CREATE TABLE public.order_status_history (
   history_id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -116,8 +132,13 @@ CREATE TABLE public.orders (
   payment_method character varying,
   created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
   updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  delivery_partner_id uuid,
+  delivery_status character varying DEFAULT 'pending'::character varying,
+  pickup_time timestamp without time zone,
+  delivery_time timestamp without time zone,
   CONSTRAINT orders_pkey PRIMARY KEY (order_id),
-  CONSTRAINT orders_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(user_id)
+  CONSTRAINT orders_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT orders_delivery_partner_id_fkey FOREIGN KEY (delivery_partner_id) REFERENCES public.delivery_partners(delivery_partner_id)
 );
 CREATE TABLE public.otp_storage (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

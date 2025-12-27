@@ -4,7 +4,7 @@ import { supabase } from '../../../../lib/supabase'
 // GET /api/coupons/[id] - Get a specific coupon
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   try {
     const { data, error } = await supabase
@@ -44,7 +44,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    
+
     // Validate required fields
     const requiredFields = ['code', 'title', 'discount_type', 'discount_value', 'valid_from', 'valid_until']
     for (const field of requiredFields) {
@@ -83,7 +83,7 @@ export async function PUT(
     // Validate dates
     const validFrom = new Date(body.valid_from)
     const validUntil = new Date(body.valid_until)
-    
+
     if (validFrom >= validUntil) {
       return NextResponse.json(
         { error: 'valid_until must be after valid_from' },

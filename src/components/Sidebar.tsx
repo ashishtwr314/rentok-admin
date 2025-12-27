@@ -27,7 +27,10 @@ import {
   Campaign as CampaignIcon,
   LocalOffer as CouponIcon,
   Label as TagIcon,
-  Notifications as NotificationsIcon
+  Notifications as NotificationsIcon,
+  DeliveryDining as DeliveryIcon,
+  CalendarToday as TodayIcon,
+  History as HistoryIcon
 } from '@mui/icons-material'
 import Image from 'next/image'
 
@@ -45,7 +48,7 @@ const THEME_COLORS = {
 }
 
 interface SidebarProps {
-  userRole: 'admin' | 'vendor'
+  userRole: 'admin' | 'vendor' | 'delivery_partner'
   activeItem?: string
   onItemClick?: (item: string) => void
   onLogout?: () => void
@@ -54,6 +57,7 @@ interface SidebarProps {
 const adminMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: DashboardIcon },
   { id: 'vendors', label: 'Vendors', icon: StoreIcon },
+  { id: 'delivery-partners', label: 'Delivery Partners', icon: DeliveryIcon },
   { id: 'products', label: 'Products', icon: InventoryIcon },
   { id: 'categories', label: 'Categories', icon: CategoryIcon },
   { id: 'tags', label: 'Tags', icon: TagIcon },
@@ -75,13 +79,22 @@ const vendorMenuItems = [
   { id: 'profile', label: 'Profile', icon: SettingsIcon },
 ]
 
+const deliveryPartnerMenuItems = [
+  { id: 'today', label: 'Today', icon: TodayIcon },
+  { id: 'all-deliveries', label: 'All Deliveries', icon: HistoryIcon },
+  { id: 'profile', label: 'Profile', icon: SettingsIcon },
+]
+
 export const Sidebar: React.FC<SidebarProps> = ({ 
   userRole, 
   activeItem = 'dashboard', 
   onItemClick,
   onLogout
 }) => {
-  const menuItems = userRole === 'admin' ? adminMenuItems : vendorMenuItems
+  const menuItems = 
+    userRole === 'admin' ? adminMenuItems : 
+    userRole === 'vendor' ? vendorMenuItems : 
+    deliveryPartnerMenuItems
 
   const handleItemClick = (itemId: string) => {
     if (onItemClick) {
@@ -96,6 +109,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           break
         case 'vendors':
           window.location.href = '/admin/vendors'
+          break
+        case 'delivery-partners':
+          window.location.href = '/admin/delivery-partners'
           break
         case 'products':
           window.location.href = '/admin/products'
@@ -141,6 +157,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
           break
         // Add more routes as needed
         default:
+          break
+      }
+    }
+    
+    // Handle navigation for delivery partner routes
+    if (userRole === 'delivery_partner') {
+      switch (itemId) {
+        case 'today':
+        case 'all-deliveries':
+          // These are handled within the dashboard page
+          if (onItemClick) {
+            onItemClick(itemId)
+          }
+          break
+        case 'profile':
+          window.location.href = '/delivery/profile'
+          break
+        default:
+          if (onItemClick) {
+            onItemClick(itemId)
+          }
           break
       }
     }
